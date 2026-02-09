@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chris Andrew Maths Game</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial Rounded MT Bold, Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+    text-align: center;
+}
+
+h1 {
+    margin: 15px;
+    font-size: 36px;
+    animation: bounce 1s infinite alternate;
+}
+
+@keyframes bounce {
+    from { transform: scale(1); }
+    to { transform: scale(1.08); }
+}
+
+.container {
+    max-width: 850px;
+    margin: auto;
+    padding: 20px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 20px;
+}
+
+button {
+    padding: 14px 24px;
+    font-size: 18px;
+    border-radius: 15px;
+    border: none;
+    cursor: pointer;
+    margin: 10px;
+    transition: 0.2s;
+}
+
+button:hover {
+    transform: scale(1.1);
+    background: gold;
+    color: black;
+}
+
+.choice {
+    width: 45%;
+}
+
+#timer {
+    font-size: 28px;
+    color: gold;
+}
+
+#message {
+    font-size: 26px;
+    margin: 15px;
+    animation: pop 0.5s;
+}
+
+@keyframes pop {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.correctFlash {
+    background: #00c853;
+}
+
+.wrongFlash {
+    background: #d50000;
+}
+
+.hidden {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎯 Chris Andrew Maths Game 🎯</h1>
+
+<div class="container">
+
+<div id="menu">
+    <h2>Select Mode</h2>
+    <button onclick="startIndividual()">👤 Individual Mode</button>
+    <button onclick="startTeam()">👥 Team Mode (24 Students)</button>
+</div>
+
+<div id="game" class="hidden">
+    <div id="modeInfo"></div>
+    <div id="scoreInfo"></div>
+    <div id="timer">⏱️ 15</div>
+    <h2 id="question"></h2>
+
+    <div>
+        <button class="choice" onclick="answer(0)"></button>
+        <button class="choice" onclick="answer(1)"></button><br>
+        <button class="choice" onclick="answer(2)"></button>
+        <button class="choice" onclick="answer(3)"></button>
+    </div>
+
+    <div id="message"></div>
+</div>
+
+<div id="end" class="hidden">
+    <h2>🏆 Game Over 🏆</h2>
+    <p id="finalScore"></p>
+    <button onclick="location.reload()">Play Again</button>
+</div>
+
+</div>
+
+<script>
+let score = 0;
+let timer = 15;
+let interval;
+let currentAnswer;
+let questionCount = 0;
+let maxQuestions = 12;
+let team = 1;
+let totalTeams = 4;
+let mode = "individual";
+let streak = 0;
+
+// SOUNDS
+const sounds = {
+    correct: new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"),
+    win: new Audio("https://actions.google.com/sounds/v1/cartoon/ta_da.ogg"),
+    wrong: new Audio("https://actions.google.com/sounds/v1/alarms/buzzer.ogg"),
+    time: new Audio("https://actions.google.com/sounds/v1/cartoon/boing.ogg")
+};
+
+function startIndividual() {
+    mode = "individual";
+    document.getElementById("menu").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+    document.getElementById("modeInfo").innerText = "👤 Individual Mode";
+    nextQuestion();
+}
+
+function startTeam() {
+    mode = "team";
+    document.getElementById("menu").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+    document.getElementById("modeInfo").innerText = "👥 Team 1 of 4 (6 students)";
+    nextQuestion();
+}
+
+function nextQuestion() {
+    document.getElementById("message").innerText = "";
+
+    if (questionCount >= maxQuestions) {
+        if (mode === "team" && team < totalTeams) {
+            team++;
+            questionCount = 0;
+            document.getElementById("modeInfo").innerText =
+                `👥 Team ${team} of 4 (6 students)`;
+        } else {
+            endGame();
+            return;
+        }
+    }
+
+    questionCount++;
+    timer = 15;
+    document.getElementById("timer").innerText = "⏱️ 15";
+    document.getElementById("scoreInfo").innerText = `Score: ${score}`;
+
+    const multiply = Math.random() > 0.5;
+    let a = Math.floor(Math.random() * 12) + 1;
+    let b = Math.floor(Math.random() * 12) + 1;
+
+    if (multiply) {
+        currentAnswer = a * b;
+        document.getElementById("question").innerText = `${a} × ${b} = ?`;
+    } else {
+        currentAnswer = a;
+        document.getElementById("question").innerText = `${a * b} ÷ ${b} = ?`;
+    }
+
+    let choices = [currentAnswer];
+    while (choices.length < 4) {
+        let wrong = currentAnswer + Math.floor(Math.random() * 10 - 5);
+        if (wrong > 0 && !choices.includes(wrong)) choices.push(wrong);
+    }
+    choices.sort(() => Math.random() - 0.5);
+
+    document.querySelectorAll(".choice").forEach((btn, i) => {
+        btn.innerText = choices[i];
+    });
+
+    clearInterval(interval);
+    interval = setInterval(() => {
+        timer--;
+        document.getElementById("timer").innerText = `⏱️ ${timer}`;
+        if (timer <= 0) {
+            clearInterval(interval);
+            streak = 0;
+            sounds.time.play();
+            showMessage("Never give up – Chris 💪", false);
+            nextQuestion();
+        }
+    }, 1000);
+}
+
+function answer(index) {
+    clearInterval(interval);
+    const chosen = parseInt(document.querySelectorAll(".choice")[index].innerText);
+
+    if (chosen === currentAnswer) {
+        streak++;
+        let bonus = timer + (streak >= 3 ? 10 : 0);
+        score += 10 + bonus;
+        sounds.correct.play();
+        sounds.win.play();
+        showMessage("Nice one – Chris 🌟", true);
+    } else {
+        streak = 0;
+        sounds.wrong.play();
+        showMessage("Never give up – Chris 💪", false);
+    }
+
+    setTimeout(nextQuestion, 900);
+}
+
+function showMessage(text, correct) {
+    const msg = document.getElementById("message");
+    msg.innerText = text;
+    document.body.className = correct ? "correctFlash" : "wrongFlash";
+    setTimeout(() => document.body.className = "", 300);
+}
+
+function endGame() {
+    document.getElementById("game").classList.add("hidden");
+    document.getElementById("end").classList.remove("hidden");
+    document.getElementById("finalScore").innerText =
+        `Final Score: ${score} 🎉`;
+}
+</script>
+
+</body>
+</html>
